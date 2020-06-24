@@ -12,5 +12,6 @@ setuptools.setup(
   long_description=long_description,
   long_description_content_type="text/markdown",
   url="https://github.com/chrlsdai/harmonizome",
+  install_requires=list(map(str.strip, open('requirements.txt', 'r').readlines())),
   packages=setuptools.find_packages(),
 )
