@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
   long_description = fh.read()
 
 setuptools.setup(
-  name="harmonizome", # Replace with your own username
+  name="harmonizome-helper",
   version="0.0.1",
   author="Charles R. Dai",
   author_email="charles.r.dai@gmail.com",
