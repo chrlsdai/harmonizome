@@ -16,30 +16,25 @@ from tqdm import tqdm
 def removeAndImpute(df):
     '''
     Removes rows and columns that have more than 95% of their data missing,
-    i.e. set to 0. Replacing any missing data leftover after removal with
+    or 0. Replacing any missing data leftover after removal with
     the means of the rows.
     '''
     r, c = df.shape
-    df = df.replace(0.0, np.nan)
-    df = df.dropna(thresh=0.05 * r, axis=1)
-    df = df.dropna(thresh=0.05 * c, axis=0)
+    df.loc[np.sum(np.logical_or(np.isnan(df), df == 0), axis=1) < 0.05 * r, 
+           np.sum(np.logical_or(np.isnan(df), df == 0), axis=0) < 0.05 * c]
     
     return df.fillna(df.mean(axis=0))
 
 
-def merge(inputDF, axis, method):
+def merge(inputDF, axis):
     '''
     Merges duplicate rows or columns, depending on the axis specified. The
     final values of the merged rows or columns is determined by the method.
     '''
-    axis = axis.lower()
-    if method == 'mean':
-        if axis == 'column':
-            outputDF = inputDF.groupby(inputDF.columns, axis=1).mean()
-        elif axis == 'row':
-            outputDF = inputDF.groupby(level=0, axis=0).mean()
-        return outputDF
-
+    if axis == 'column':
+        return inputDF.groupby(inputDF.columns, axis=1).mean()
+    elif axis == 'row':
+        return inputDF.groupby(level=0, axis=0).mean()
 
 def quantileNormalize(inputDF):
     '''
@@ -53,7 +48,7 @@ def quantileNormalize(inputDF):
     return outputDF
 
 
-def zscore(inputDF, axis, epsilon=0):
+def zscore(inputDF, epsilon=0):
     '''
     Calculates the modified z-score of inputDF according to the specified axis.
 
@@ -62,30 +57,20 @@ def zscore(inputDF, axis, epsilon=0):
         epsilon - small adjustment in the case of divide by 0 errors.
     '''
     np.seterr(divide='ignore', invalid='ignore')
-    if axis == 'row':
-        a = inputDF.to_numpy()
-        median_y = np.median(a, axis=1)[:, np.newaxis]
-        abs_dev = np.abs(a - median_y)
-        median_dev = np.median(abs_dev, axis=1)
-        mean_dev = np.mean(abs_dev, axis=1)
-        median_abs_dev = np.broadcast_to(median_dev[:, np.newaxis], a.shape)
-        mean_abs_dev = np.broadcast_to(mean_dev[:, np.newaxis], a.shape)
-        modified_z_scores = np.where(median_abs_dev != 0,
-                                     0.6745 * (a - median_y) / median_abs_dev,
-                                     (a - median_y) / (1.253314 * mean_abs_dev + epsilon))
+    a = inputDF.to_numpy()
+    median_y = np.median(a, axis=1)[:, np.newaxis]
+    abs_dev = np.abs(a - median_y)
+    median_dev = np.median(abs_dev, axis=1)
+    mean_dev = np.mean(abs_dev, axis=1)
+    median_abs_dev = np.broadcast_to(median_dev[:, np.newaxis], a.shape)
+    mean_abs_dev = np.broadcast_to(mean_dev[:, np.newaxis], a.shape)
+    modified_z_scores = np.where(median_abs_dev != 0,
+                                    0.6745 * (a - median_y) / median_abs_dev,
+                                    (a - median_y) / (1.253314 * mean_abs_dev + epsilon))
 
-        outputDF = pd.DataFrame(data=modified_z_scores, index=inputDF.index,
-                                columns=inputDF.columns)
-        return outputDF
-
-    elif axis == 'column':
-        # left unfactored. Is this used?
-        for i, col in enumerate(tqdm(inputDF.columns)):
-
-            mean = inputDF[col].mean()
-            std = inputDF[col].std()
-            inputDF[col] = inputDF[col].apply(lambda x: ((x-mean)/std))
-
+    outputDF = pd.DataFrame(data=modified_z_scores, index=inputDF.index,
+                            columns=inputDF.columns)
+    return outputDF
 
 def log2(inputDF):
     '''
@@ -98,7 +83,7 @@ def log2(inputDF):
     return outputDF
 
 
-def mapgenesymbols(df, symbol_lookup):
+def mapgenesymbols(df, symbol_lookup, drop_duplicates=False):
     '''
     Replaces the index of the df, which are gene names, with
     corresponding approved gene symbols according to the given symbol_lookup 
@@ -111,7 +96,9 @@ def mapgenesymbols(df, symbol_lookup):
     df.iloc[:, 0] = df.iloc[:, 0].progress_map(
         lambda x: symbol_lookup.get(x, np.nan))
 
-    df = df.dropna(subset=[df.columns[0]]).drop_duplicates()
+    df = df.dropna(subset=[df.columns[0]])
+    if drop_duplicates:
+        df = df.drop_duplicates()
     df = df.set_index(df.columns[0])
     return df
 
