@@ -267,7 +267,7 @@ def createAttributeList(inputDF, metaData=None):
     of inputDF onto the metaData DataFrame.
     '''
     if metaData is not None:
-        attribute_list = metaData.set_index(inputDF.columns)
+        attribute_list = metaData.reindex(inputDF.columns)
     else:
         attribute_list = pd.DataFrame(index=inputDF.columns)
     attribute_list.index.name = 'Attributes'
