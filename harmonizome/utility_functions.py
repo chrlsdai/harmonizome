@@ -295,7 +295,7 @@ def createGeneAttributeEdgeList(df, attributelist, genelist, path, name):
     #df['Weight'] = df['Weight'].astype('category')
 
     df.columns = ['Gene', 'Attribute', 'Weight']
-    ##saveData(df, path, name, ext='tsv', compression='gzip')
+    saveData(df, path, name, ext='tsv', compression='gzip')
 
     print('The number of statisticaly relevent gene-attribute associations is: %d' % count)
 
