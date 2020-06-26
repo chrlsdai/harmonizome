@@ -26,61 +26,53 @@ def removeAndImpute(df):
     return df.fillna(df.mean(axis=0))
 
 
-def merge(inputDF, axis):
+def merge(df, axis):
     '''
     Merges duplicate rows or columns, depending on the axis specified. The
     final values of the merged rows or columns is determined by the method.
     '''
     if axis == 'column':
-        return inputDF.groupby(inputDF.columns, axis=1).mean()
+        return df.groupby(df.columns, axis=1).mean()
     elif axis == 'row':
-        return inputDF.groupby(level=0, axis=0).mean()
+        return df.groupby(level=0, axis=0).mean()
 
-def quantileNormalize(inputDF):
+def quantileNormalize(df):
     '''
     Performs quantile normalization on the input DataFrame.
     '''
     # from ayhan on StackOverflow
-    rank_mean = inputDF.stack().groupby(
-        inputDF.rank(method='first').stack().astype(int)).mean()
-    outputDF = inputDF.rank(method='min').stack().astype(int).map(
+    rank_mean = df.stack().groupby(
+        df.rank(method='first').stack().astype(int)).mean()
+    return df.rank(method='min').stack().astype(int).map(
         rank_mean).unstack()
-    return outputDF
 
-
-def zscore(inputDF, epsilon=0):
+def zscore(df, epsilon=0):
     '''
-    Calculates the modified z-score of inputDF according to the specified axis.
+    Calculates the modified z-score of df according to the specified axis.
 
     Parameters:
         axis - the axis on which to calculate the z-scores. Either 'row' or 'column'
         epsilon - small adjustment in the case of divide by 0 errors.
     '''
     np.seterr(divide='ignore', invalid='ignore')
-    a = inputDF.to_numpy()
-    median_y = np.median(a, axis=1)[:, np.newaxis]
-    abs_dev = np.abs(a - median_y)
+    median_y = np.median(df, axis=1)[:, np.newaxis]
+    abs_dev = np.abs(df - median_y)
     median_dev = np.median(abs_dev, axis=1)
     mean_dev = np.mean(abs_dev, axis=1)
-    median_abs_dev = np.broadcast_to(median_dev[:, np.newaxis], a.shape)
-    mean_abs_dev = np.broadcast_to(mean_dev[:, np.newaxis], a.shape)
+    median_abs_dev = np.broadcast_to(median_dev[:, np.newaxis], df.shape)
+    mean_abs_dev = np.broadcast_to(mean_dev[:, np.newaxis], df.shape)
     modified_z_scores = np.where(median_abs_dev != 0,
-                                    0.6745 * (a - median_y) / median_abs_dev,
-                                    (a - median_y) / (1.253314 * mean_abs_dev + epsilon))
+                                    0.6745 * (df - median_y) / median_abs_dev,
+                                    (df - median_y) / (1.253314 * mean_abs_dev + epsilon))
 
-    outputDF = pd.DataFrame(data=modified_z_scores, index=inputDF.index,
-                            columns=inputDF.columns)
-    return outputDF
+    return pd.DataFrame(data=modified_z_scores, index=df.index,
+                            columns=df.columns)
 
-def log2(inputDF):
+def log2(df):
     '''
-    Returns a dataframe with the log2 values of the input.
+    Returns a dataframe with the adjusted log2 values of the input.
     '''
-    a = inputDF.to_numpy(copy=True)
-    a = np.log2(a + 1)
-    outputDF = pd.DataFrame(data=a, index=inputDF.index,
-                            columns=inputDF.columns)
-    return outputDF
+    return np.log2(df + 1)
 
 
 def mapgenesymbols(df, symbol_lookup, remove_duplicates=False):
@@ -103,7 +95,7 @@ def mapgenesymbols(df, symbol_lookup, remove_duplicates=False):
     return df
 
 
-def createTernaryMatrix(inputDF):
+def createTernaryMatrix(df):
     '''
     Returns the input matrix with all significant values, greater than 0.95
     or less than -0.95, mapped to 1 or -1, respectively. All other values
@@ -117,11 +109,10 @@ def createTernaryMatrix(inputDF):
         else:
             return 0
 
-    df = inputDF.applymap(mapter)
-    return df
+    return df.applymap(mapter)
 
 
-def createSetLibHelper(lib, inputDF, path, name, direction, details=None):
+def createSetLibHelper(lib, df, path, name, direction, details=None):
     '''
     If lib = 'gene', this creates a file which lists all attributes and the
     genes that are correlated in the direction given with that attribute.
@@ -139,11 +130,11 @@ def createSetLibHelper(lib, inputDF, path, name, direction, details=None):
     if not (lib == 'gene' or lib == 'attribute'):
         return
     if lib == 'attribute':
-        inputDF = inputDF.T
+        df = df.T
 
     with open(filenameGMT, 'w') as f:
-        arr = inputDF.reset_index(drop=True).to_numpy(dtype=np.int_)
-        attributes = inputDF.columns
+        arr = df.reset_index(drop=True).to_numpy(dtype=np.int_)
+        attributes = df.columns
 
         if lib == 'gene':
             num_match = (arr == direction).sum(axis=0)
@@ -155,59 +146,59 @@ def createSetLibHelper(lib, inputDF, path, name, direction, details=None):
         w, h = arr.shape
         for i in tqdm(range(h)):
             print(attributes[i], details[i] if details else 'NA',
-                  *inputDF.index[arr[:, i] == direction],
+                  *df.index[arr[:, i] == direction],
                   sep='\t', end='\n', file=f)
 
 
-def createUpGeneSetLib(inputDF, path, name, details=None):
+def createUpGeneSetLib(df, path, name, details=None):
     '''
     Create a file which lists all attributes and the genes that are positively
     correlated with that attribute. The year and month are added at the
     end of the name. The path the file is saved to is thus
         path + name + '_<year>_<month>.gmt'
     '''
-    createSetLibHelper('gene', inputDF, path, name, 1, details)
+    createSetLibHelper('gene', df, path, name, 1, details)
 
 
-def createDownGeneSetLib(inputDF, path, name, details=None):
+def createDownGeneSetLib(df, path, name, details=None):
     '''
     Create a file which lists all attributes and the genes that are negatively
     correlated with that attribute. The year and month are added at the
     end of the name. The path the file is saved to is thus
         path + name + '_<year>_<month>.gmt'
     '''
-    createSetLibHelper('gene', inputDF, path, name, -1, details)
+    createSetLibHelper('gene', df, path, name, -1, details)
 
 
-def createUpAttributeSetLib(inputDF, path, name):
+def createUpAttributeSetLib(df, path, name):
     '''
     Create a file which lists all genes and the attributes that are positively
     correlated with that gene. The year and month are added at the
     end of the name. The path the file is saved to is thus
         path + name + '_<year>_<month>.gmt'
     '''
-    createSetLibHelper('attribute', inputDF, path, name, 1)
+    createSetLibHelper('attribute', df, path, name, 1)
 
 
-def createDownAttributeSetLib(inputDF, path, name):
+def createDownAttributeSetLib(df, path, name):
     '''
     Create a file which lists all genes and the attributes that are negatively
     correlated with that gene. The year and month are added at the
     end of the name. The path the file is saved to is thus
         path + name + '_<year>_<month>.gmt'
     '''
-    createSetLibHelper('attribute', inputDF, path, name, -1)
+    createSetLibHelper('attribute', df, path, name, -1)
 
 
-def createSimilarityMatrix(inputDF, metric, dtype=None, sparse=False):
+def createSimilarityMatrix(df, metric, dtype=None, sparse=False):
     '''
-    Creates a similarity matrix between the rows of the inputDF based on
+    Creates a similarity matrix between the rows of the df based on
     the metric specified. The resulting matrix has both rows and columns labeled
-    by the index of inputDF.
+    by the index of df.
     '''
     if sparse and metric == 'jaccard':
         # from na-o-ys on Github
-        sparse = sp.csr_matrix(inputDF.to_numpy(dtype=np.bool).astype(np.int))
+        sparse = sp.csr_matrix(df.to_numpy(dtype=np.bool).astype(np.int))
         cols_sum = sparse.getnnz(axis=1)
         ab = sparse * sparse.T
         denom = np.repeat(cols_sum, ab.getnnz(axis=1)) + \
@@ -217,18 +208,18 @@ def createSimilarityMatrix(inputDF, metric, dtype=None, sparse=False):
         np.fill_diagonal(similarity_matrix, 1)
 
     else:
-        similarity_matrix = dist.pdist(inputDF.to_numpy(dtype=dtype), metric)
+        similarity_matrix = dist.pdist(df.to_numpy(dtype=dtype), metric)
         similarity_matrix = dist.squareform(similarity_matrix)
         similarity_matrix = 1 - similarity_matrix
 
     similarity_df = pd.DataFrame(
-        data=similarity_matrix, index=inputDF.index, columns=inputDF.index)
+        data=similarity_matrix, index=df.index, columns=df.index)
     similarity_df.index.name = None
     similarity_df.columns.name = None
     return similarity_df
 
 
-def createGeneList(inputDF, geneid_lookup):
+def createGeneList(df, geneid_lookup):
     '''
     Creates a list of genes and the corresponding Entrez Gene IDs(supplied by
     the NCBI)
@@ -237,7 +228,7 @@ def createGeneList(inputDF, geneid_lookup):
     with genes that do not have an ID. This function will set the id of the gene
     to -1, whereas the previous script will set them to np.nan.
     '''
-    gene_list = inputDF.index
+    gene_list = df.index
     gene_ids = np.array([geneid_lookup.get(x, -1)
                          if np.isfinite(geneid_lookup.get(x, -1))
                          else -1 for x in tqdm(gene_list)], dtype=np.int_)
@@ -246,16 +237,16 @@ def createGeneList(inputDF, geneid_lookup):
     return df
 
 
-def createAttributeList(inputDF, metaData=None):
+def createAttributeList(df, metaData=None):
     '''
     Creates a list of attributes in the form of a DataFrame, with the attributes
     as the indices. If metaData is specified, it returns appends the attributes
-    of inputDF onto the metaData DataFrame.
+    of df onto the metaData DataFrame.
     '''
     if metaData is not None:
-        attribute_list = metaData.reindex(inputDF.columns)
+        attribute_list = metaData.reindex(df.columns)
     else:
-        attribute_list = pd.DataFrame(index=inputDF.columns)
+        attribute_list = pd.DataFrame(index=df.columns)
     attribute_list.index.name = 'Attributes'
     return attribute_list
 
@@ -286,15 +277,15 @@ def createGeneAttributeEdgeList(df, attributelist, genelist, path, name):
     print('The number of statisticaly relevent gene-attribute associations is: %d' % count)
 
 
-def createStandardizedMatrix(inputDF):
+def createStandardizedMatrix(df):
     '''
     Creates a standardized matrix by using an emperical CDF for each row.
-    Each row in the inputDF should represent a single gene.
+    Each row in the df should represent a single gene.
 
     Requires:
     Indices of the DataFrame are unique.
     '''
-    arr = inputDF.to_numpy(copy=True)
+    arr = df.to_numpy(copy=True)
 
     def process(array):
         ourECDF = ECDF(array)
@@ -312,8 +303,8 @@ def createStandardizedMatrix(inputDF):
 
     mean = np.mean(ourECDF)
     ourECDF = 2 * (ourECDF - mean)
-    newDF = pd.DataFrame(data=ourECDF, index=inputDF.index,
-                         columns=inputDF.columns)
+    newDF = pd.DataFrame(data=ourECDF, index=df.index,
+                         columns=df.columns)
     return newDF
 
 
@@ -328,10 +319,10 @@ def getFileName(path, name, ext):
     return os.path.join(path, filename)
 
 
-def saveData(inputDF, path, name, compression=None, ext='tsv',
+def saveData(df, path, name, compression=None, ext='tsv',
              symmetric=False, dtype=None, **kwargs):
     '''
-    Save inputDF according to the compression method given. 
+    Save df according to the compression method given. 
     compression can take these values:
         None or 'gmt' - defaults to pandas to_csv() function.
         'gzip' - uses the gzip compression method of the pandas to_csv() function
@@ -341,9 +332,9 @@ def saveData(inputDF, path, name, compression=None, ext='tsv',
     ext is only used if compression is None or 'gzip'. The extension of the file
     will be .ext, or .ext.gz if 'gzip' is specified.
     axes must only be specified if compression is 'npz'. It is a string tuple
-    that describes the index and columns inputDF, i.e. (x, y) where x, y = 
+    that describes the index and columns df, i.e. (x, y) where x, y = 
     'gene' or 'attribute'.
-    symmetric is only used if compression is 'npz', and indicates if inputDF
+    symmetric is only used if compression is 'npz', and indicates if df
     is symmetric and can be stored as such. 
     dtype is only used if compression is 'npz', and indicates a dtype that the
     array can be cast to before storing.
@@ -356,16 +347,16 @@ def saveData(inputDF, path, name, compression=None, ext='tsv',
 
     if compression is None:
         name = getFileName(path, name, ext)
-        inputDF.to_csv(name, sep='\t', **kwargs)
+        df.to_csv(name, sep='\t', **kwargs)
     elif compression == 'gzip':
         name = getFileName(path, name, ext + '.gz')
-        inputDF.to_csv(name, sep='\t', compression='gzip', **kwargs)
+        df.to_csv(name, sep='\t', compression='gzip', **kwargs)
     elif compression == 'npz':
         name = getFileName(path, name, 'npz')
 
-        data = inputDF.to_numpy(dtype=dtype)
-        index = np.array(inputDF.index)
-        columns = np.array(inputDF.columns)
+        data = df.to_numpy(dtype=dtype)
+        index = np.array(df.index)
+        columns = np.array(df.columns)
 
         if symmetric:
             data = np.triu(data)
