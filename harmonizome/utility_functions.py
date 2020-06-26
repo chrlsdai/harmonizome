@@ -210,11 +210,10 @@ def createSimilarityMatrix(inputDF, metric, dtype=None, sparse=False):
         sparse = sp.csr_matrix(inputDF.to_numpy(dtype=np.bool).astype(np.int))
         cols_sum = sparse.getnnz(axis=1)
         ab = sparse * sparse.T
-        aa = np.repeat(cols_sum, ab.getnnz(axis=1)) # for rows
-        bb = cols_sum[ab.indices] # for columns
-        similarities = ab.copy()
-        similarities.data = similarities.data / (aa + bb - ab.data)
-        similarity_matrix = similarities.todense()
+        denom = np.repeat(cols_sum, ab.getnnz(axis=1)) + \
+                cols_sum[ab.indices] - ab.data
+        ab.data = ab.data / denom
+        similarity_matrix = ab.todense()
         np.fill_diagonal(similarity_matrix, 1)
 
     else:
