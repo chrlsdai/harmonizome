@@ -83,7 +83,7 @@ def log2(inputDF):
     return outputDF
 
 
-def mapgenesymbols(df, symbol_lookup, drop_duplicates=False):
+def mapgenesymbols(df, symbol_lookup, remove_duplicates=False):
     '''
     Replaces the index of the df, which are gene names, with
     corresponding approved gene symbols according to the given symbol_lookup 
@@ -97,7 +97,7 @@ def mapgenesymbols(df, symbol_lookup, drop_duplicates=False):
         lambda x: symbol_lookup.get(x, np.nan))
 
     df = df.dropna(subset=[df.columns[0]])
-    if drop_duplicates:
+    if remove_duplicates:
         df = df.drop_duplicates()
     df = df.set_index(df.columns[0])
     return df
