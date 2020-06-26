@@ -402,28 +402,12 @@ def createArchive(path):
                 zipf.write(os.path.join(root, f))
 
 
-def createBinaryMatrix(inputDF, ppi=False):
+def createBinaryMatrix(df):
     '''
-    Creates an adjacency matrix from inputDF, which is a gene-attribute edge
+    Creates an adjacency matrix from df, which is a gene-attribute edge
     list.
     '''
-    if ppi:
-        # Left unfactored. Is this used?
-        genes = list(set(inputDF.iloc[:, 0].unique(
-        ).tolist()+inputDF.iloc[:, 1].unique().tolist()))
-        matrix = pd.DataFrame(index=genes, columns=genes, data=0)
-        for i, gene in enumerate(tqdm(genes)):
-            lst = inputDF[inputDF.iloc[:, 0] == gene].iloc[:, 1].tolist()
-            lst += inputDF[inputDF.iloc[:, 1] == gene].iloc[:, 0].tolist()
-            lst = set(lst)
-            lst.discard(gene)
-            lst = list(lst)
-            matrix.loc[gene, lst] = 1
-        return(matrix)
-    else:
-        matrix = pd.crosstab(inputDF.index, inputDF.iloc[:, 0])
-        matrix[matrix > 1] = 1
-        matrix = matrix.astype('boolean')
-        matrix.index.name = None
-        matrix.columns.name = None
-        return matrix
+    matrix = pd.crosstab(df.index, df.iloc[:, 0]) > 0
+    matrix.index.name = df.index.name
+    matrix.columns.name = df.columns[0]
+    return matrix
