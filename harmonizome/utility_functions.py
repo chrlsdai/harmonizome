@@ -247,7 +247,7 @@ def createAttributeList(df, metaData=None):
         attribute_list = metaData.reindex(df.columns)
     else:
         attribute_list = pd.DataFrame(index=df.columns)
-    attribute_list.index.name = 'Attributes'
+    attribute_list.index.name = df.columns.name
     return attribute_list
 
 
