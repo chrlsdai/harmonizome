@@ -126,12 +126,10 @@ def ternary_matrix(df):
     return df.applymap(mapter)
 
 
-def save_setlib(lib, df, path, name, direction, details=None):
+def save_setlib(df, lib, direction, path, name):
     '''
     If lib = 'gene', this creates a file which lists all attributes and the
     genes that are correlated in the direction given with that attribute.
-    Only attributes that are correlated with more than 5 and less than or equal
-    to 2000 genes are saved.
 
     If lib = 'attribute', this creates a file which lists all genes and the
     attributes that are correlated in the direction given with that gene.
@@ -151,17 +149,9 @@ def save_setlib(lib, df, path, name, direction, details=None):
         arr = df.reset_index(drop=True).to_numpy(dtype=np.int_)
         attributes = df.columns
 
-        if lib == 'gene':
-            num_match = (arr == direction).sum(axis=0)
-            sufficient_matched = np.logical_and(
-                num_match > 5, num_match <= 2000)
-            arr = arr[:, sufficient_matched]
-            attributes = attributes[sufficient_matched]
-
         w, h = arr.shape
         for i in tqdm(range(h)):
-            print(attributes[i], details[i] if details else 'NA',
-                  *df.index[arr[:, i] == direction],
+            print(attributes[i], *df.index[arr[:, i] == direction],
                   sep='\t', end='\n', file=f)
 
 
