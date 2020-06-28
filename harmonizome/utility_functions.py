@@ -193,12 +193,11 @@ def gene_list(df, geneid_lookup):
     with genes that do not have an ID. This function will set the id of the gene
     to -1, whereas the previous script will set them to np.nan.
     '''
-    gene_list = df.index
     gene_ids = np.array([geneid_lookup.get(x, -1)
                          if np.isfinite(geneid_lookup.get(x, -1))
-                         else -1 for x in tqdm(gene_list)], dtype=np.int_)
-    df = pd.DataFrame(list(zip(gene_list, gene_ids)),
-                      columns=['Gene Symbol', 'Gene ID'])
+                         else -1 for x in tqdm(df.index)], dtype=np.int_)
+    df = pd.DataFrame(gene_ids, index=df.index,
+                      columns=['Gene ID'])
     return df
 
 
