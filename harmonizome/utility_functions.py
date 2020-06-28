@@ -13,7 +13,7 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from tqdm import tqdm
 
 
-def removeAndImpute(df):
+def remove_impute(df):
     '''
     Removes rows and columns that have more than 95% of their data missing,
     or 0. Replacing any missing data leftover after removal with
@@ -37,7 +37,7 @@ def merge(df, axis):
         return df.groupby(level=0, axis=0).mean()
 
 
-def quantileNormalize(df):
+def quantile_normalize(df):
     '''
     Performs quantile normalization on the input DataFrame.
     '''
@@ -78,7 +78,7 @@ def log2(df):
     return np.log2(df + 1)
 
 
-def mapgenesymbols(df, symbol_lookup, remove_duplicates=False):
+def map_symbols(df, symbol_lookup, remove_duplicates=False):
     '''
     Replaces the index of the df, which are gene names, with
     corresponding approved gene symbols according to the given symbol_lookup 
@@ -98,7 +98,7 @@ def mapgenesymbols(df, symbol_lookup, remove_duplicates=False):
     return df
 
 
-def createBinaryMatrix(df):
+def binary_matrix(df):
     '''
     Creates an adjacency matrix from df, which is a gene-attribute edge
     list.
@@ -109,7 +109,7 @@ def createBinaryMatrix(df):
     return matrix
 
 
-def createTernaryMatrix(df):
+def ternary_matrix(df):
     '''
     Returns the input matrix with all significant values, greater than 0.95
     or less than -0.95, mapped to 1 or -1, respectively. All other values
@@ -126,7 +126,7 @@ def createTernaryMatrix(df):
     return df.applymap(mapter)
 
 
-def createSetLibHelper(lib, df, path, name, direction, details=None):
+def save_setlib(lib, df, path, name, direction, details=None):
     '''
     If lib = 'gene', this creates a file which lists all attributes and the
     genes that are correlated in the direction given with that attribute.
@@ -139,7 +139,8 @@ def createSetLibHelper(lib, df, path, name, direction, details=None):
     saved to is thus
         path + name + '_<year>_<month>.gmt'
     '''
-    filenameGMT = getFileName(path, name, 'gmt')
+    filenameGMT = file_name(path, name, 'gmt')
+    direction = {'up': 1, 'down': -1}[direction]
 
     if not (lib == 'gene' or lib == 'attribute'):
         return
@@ -164,47 +165,7 @@ def createSetLibHelper(lib, df, path, name, direction, details=None):
                   sep='\t', end='\n', file=f)
 
 
-def createUpGeneSetLib(df, path, name, details=None):
-    '''
-    Create a file which lists all attributes and the genes that are positively
-    correlated with that attribute. The year and month are added at the
-    end of the name. The path the file is saved to is thus
-        path + name + '_<year>_<month>.gmt'
-    '''
-    createSetLibHelper('gene', df, path, name, 1, details)
-
-
-def createDownGeneSetLib(df, path, name, details=None):
-    '''
-    Create a file which lists all attributes and the genes that are negatively
-    correlated with that attribute. The year and month are added at the
-    end of the name. The path the file is saved to is thus
-        path + name + '_<year>_<month>.gmt'
-    '''
-    createSetLibHelper('gene', df, path, name, -1, details)
-
-
-def createUpAttributeSetLib(df, path, name):
-    '''
-    Create a file which lists all genes and the attributes that are positively
-    correlated with that gene. The year and month are added at the
-    end of the name. The path the file is saved to is thus
-        path + name + '_<year>_<month>.gmt'
-    '''
-    createSetLibHelper('attribute', df, path, name, 1)
-
-
-def createDownAttributeSetLib(df, path, name):
-    '''
-    Create a file which lists all genes and the attributes that are negatively
-    correlated with that gene. The year and month are added at the
-    end of the name. The path the file is saved to is thus
-        path + name + '_<year>_<month>.gmt'
-    '''
-    createSetLibHelper('attribute', df, path, name, -1)
-
-
-def createSimilarityMatrix(df, metric, dtype=None, sparse=False):
+def similarity_matrix(df, metric, dtype=None, sparse=False):
     '''
     Creates a similarity matrix between the rows of the df based on
     the metric specified. The resulting matrix has both rows and columns labeled
@@ -233,7 +194,7 @@ def createSimilarityMatrix(df, metric, dtype=None, sparse=False):
     return similarity_df
 
 
-def createGeneList(df, geneid_lookup):
+def gene_list(df, geneid_lookup):
     '''
     Creates a list of genes and the corresponding Entrez Gene IDs(supplied by
     the NCBI)
@@ -251,7 +212,7 @@ def createGeneList(df, geneid_lookup):
     return df
 
 
-def createAttributeList(df, metaData=None):
+def attribute_list(df, metaData=None):
     '''
     Creates a list of attributes in the form of a DataFrame, with the attributes
     as the indices. If metaData is specified, it returns appends the attributes
@@ -265,7 +226,7 @@ def createAttributeList(df, metaData=None):
     return attribute_list
 
 
-def createStandardizedMatrix(df):
+def standardized_matrix(df):
     '''
     Creates a standardized matrix by using an emperical CDF for each row.
     Each row in the df should represent a single gene.
@@ -296,7 +257,7 @@ def createStandardizedMatrix(df):
     return newDF
 
 
-def createGeneAttributeEdgeList(df):
+def edge_list(df):
     '''
     Creates the gene-attribute edge list from the given input DataFrame,
     attribute and gene lists. The year and month are added at the
@@ -315,7 +276,7 @@ def createGeneAttributeEdgeList(df):
     return df
 
 
-def getFileName(path, name, ext):
+def file_name(path, name, ext):
     '''
     Returns the file name by taking the path and name, adding the year and month
     and then the extension. The final string returned is thus
@@ -326,8 +287,8 @@ def getFileName(path, name, ext):
     return os.path.join(path, filename)
 
 
-def saveData(df, path, name, compression=None, ext='tsv',
-             symmetric=False, dtype=None, **kwargs):
+def save_data(df, path, name, compression=None, ext='tsv',
+              symmetric=False, dtype=None, **kwargs):
     '''
     Save df according to the compression method given. 
     compression can take these values:
@@ -353,13 +314,13 @@ def saveData(df, path, name, compression=None, ext='tsv',
     '''
 
     if compression is None:
-        name = getFileName(path, name, ext)
+        name = file_name(path, name, ext)
         df.to_csv(name, sep='\t', **kwargs)
     elif compression == 'gzip':
-        name = getFileName(path, name, ext + '.gz')
+        name = file_name(path, name, ext + '.gz')
         df.to_csv(name, sep='\t', compression='gzip', **kwargs)
     elif compression == 'npz':
-        name = getFileName(path, name, 'npz')
+        name = file_name(path, name, 'npz')
 
         data = df.to_numpy(dtype=dtype)
         index = np.array(df.index)
@@ -373,7 +334,7 @@ def saveData(df, path, name, compression=None, ext='tsv',
                                 index=index, columns=columns)
 
 
-def loadData(filename):
+def load_data(filename):
     '''
     Loads a pandas DataFrame stored in a .npz data numpy array format.
     '''
@@ -393,8 +354,8 @@ def loadData(filename):
             return df
 
 
-def createArchive(path):
-    with zipfile.ZipFile('output_archive.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
+def archive(path):
+    with zipfile.ZipFile('output.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(path):
             for f in files:
                 zipf.write(os.path.join(root, f))
