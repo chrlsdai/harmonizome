@@ -20,9 +20,9 @@ def removeAndImpute(df):
     the means of the rows.
     '''
     r, c = df.shape
-    df.loc[np.sum(np.logical_or(np.isnan(df), df == 0), axis=1) < 0.05 * r, 
+    df.loc[np.sum(np.logical_or(np.isnan(df), df == 0), axis=1) < 0.05 * r,
            np.sum(np.logical_or(np.isnan(df), df == 0), axis=0) < 0.05 * c]
-    
+
     return df.fillna(df.mean(axis=0))
 
 
@@ -36,6 +36,7 @@ def merge(df, axis):
     elif axis == 'row':
         return df.groupby(level=0, axis=0).mean()
 
+
 def quantileNormalize(df):
     '''
     Performs quantile normalization on the input DataFrame.
@@ -45,6 +46,7 @@ def quantileNormalize(df):
         df.rank(method='first').stack().astype(int)).mean()
     return df.rank(method='min').stack().astype(int).map(
         rank_mean).unstack()
+
 
 def zscore(df, epsilon=0):
     '''
@@ -62,11 +64,12 @@ def zscore(df, epsilon=0):
     median_abs_dev = np.broadcast_to(median_dev[:, np.newaxis], df.shape)
     mean_abs_dev = np.broadcast_to(mean_dev[:, np.newaxis], df.shape)
     modified_z_scores = np.where(median_abs_dev != 0,
-                                    0.6745 * (df - median_y) / median_abs_dev,
-                                    (df - median_y) / (1.253314 * mean_abs_dev + epsilon))
+                                 0.6745 * (df - median_y) / median_abs_dev,
+                                 (df - median_y) / (1.253314 * mean_abs_dev + epsilon))
 
     return pd.DataFrame(data=modified_z_scores, index=df.index,
-                            columns=df.columns)
+                        columns=df.columns)
+
 
 def log2(df):
     '''
@@ -93,6 +96,17 @@ def mapgenesymbols(df, symbol_lookup, remove_duplicates=False):
         df = df.drop_duplicates()
     df = df.set_index(df.columns[0])
     return df
+
+
+def createBinaryMatrix(df):
+    '''
+    Creates an adjacency matrix from df, which is a gene-attribute edge
+    list.
+    '''
+    matrix = pd.crosstab(df.index, df.iloc[:, 0]) > 0
+    matrix.index.name = df.index.name
+    matrix.columns.name = df.columns[0]
+    return matrix
 
 
 def createTernaryMatrix(df):
@@ -202,7 +216,7 @@ def createSimilarityMatrix(df, metric, dtype=None, sparse=False):
         cols_sum = sparse.getnnz(axis=1)
         ab = sparse * sparse.T
         denom = np.repeat(cols_sum, ab.getnnz(axis=1)) + \
-                cols_sum[ab.indices] - ab.data
+            cols_sum[ab.indices] - ab.data
         ab.data = ab.data / denom
         similarity_matrix = ab.todense()
         np.fill_diagonal(similarity_matrix, 1)
@@ -233,7 +247,7 @@ def createGeneList(df, geneid_lookup):
                          if np.isfinite(geneid_lookup.get(x, -1))
                          else -1 for x in tqdm(gene_list)], dtype=np.int_)
     df = pd.DataFrame(list(zip(gene_list, gene_ids)),
-                      columns=['GeneSym', 'GeneID'])
+                      columns=['Gene Symbol', 'Gene ID'])
     return df
 
 
@@ -245,36 +259,10 @@ def createAttributeList(df, metaData=None):
     '''
     if metaData is not None:
         attribute_list = metaData.reindex(df.columns)
+        attribute_list.index.name = df.columns.name
     else:
         attribute_list = pd.DataFrame(index=df.columns)
-    attribute_list.index.name = df.columns.name
     return attribute_list
-
-
-def createGeneAttributeEdgeList(df, attributelist, genelist, path, name):
-    '''
-    Creates the gene-attribute edge list from the given input DataFrame,
-    attribute and gene lists. The year and month are added at the
-    end of the name. The path the file is saved to is thus
-        path + name + '_<year>_<month>.gmt'
-    Also prints the number of cells in df that are statistically
-    significant, i.e. > 0.95 confidence.
-    Requires:
-        attributelist and genelist were generated from running
-        createAttributeList and createGeneList on df, respectively.
-    '''
-
-    count = np.sum(np.sum(df >= 0.95) + np.sum(df <= -0.95))
-    df = df.stack()
-    df.index.names = ['Gene', 'Attribute']
-    df.name = 'Weight'
-    df = df.astype('category')
-    #df['Weight'] = df['Weight'].astype('category')
-
-    df.columns = ['Gene', 'Attribute', 'Weight']
-    saveData(df, path, name, ext='tsv', compression='gzip')
-
-    print('The number of statisticaly relevent gene-attribute associations is: %d' % count)
 
 
 def createStandardizedMatrix(df):
@@ -306,6 +294,25 @@ def createStandardizedMatrix(df):
     newDF = pd.DataFrame(data=ourECDF, index=df.index,
                          columns=df.columns)
     return newDF
+
+
+def createGeneAttributeEdgeList(df):
+    '''
+    Creates the gene-attribute edge list from the given input DataFrame,
+    attribute and gene lists. The year and month are added at the
+    end of the name. The path the file is saved to is thus
+        path + name + '_<year>_<month>.gmt'
+    Also prints the number of cells in df that are statistically
+    significant, i.e. > 0.95 confidence.
+    Requires:
+        attributelist and genelist were generated from running
+        createAttributeList and createGeneList on df, respectively.
+    '''
+    count = np.sum(np.sum(df >= 0.95) + np.sum(df <= -0.95))
+    df = df.stack()
+    df.name = 'Weight'
+    print('The number of statisticaly relevent gene-attribute associations is: %d' % count)
+    return df
 
 
 def getFileName(path, name, ext):
@@ -362,8 +369,9 @@ def saveData(df, path, name, compression=None, ext='tsv',
             data = np.triu(data)
             np.savez_compressed(name, symmetric=data, index=index)
         else:
-            np.savez_compressed(name, nonsymmetric=data, 
+            np.savez_compressed(name, nonsymmetric=data,
                                 index=index, columns=columns)
+
 
 def loadData(filename):
     '''
@@ -390,14 +398,3 @@ def createArchive(path):
         for root, _, files in os.walk(path):
             for f in files:
                 zipf.write(os.path.join(root, f))
-
-
-def createBinaryMatrix(df):
-    '''
-    Creates an adjacency matrix from df, which is a gene-attribute edge
-    list.
-    '''
-    matrix = pd.crosstab(df.index, df.iloc[:, 0]) > 0
-    matrix.index.name = df.index.name
-    matrix.columns.name = df.columns[0]
-    return matrix
