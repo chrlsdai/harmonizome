@@ -344,7 +344,7 @@ def load_data(filename):
 
 
 def archive(path):
-    with zipfile.ZipFile('output.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile('output_archive.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(path):
             for f in files:
                 zipf.write(os.path.join(root, f))

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="harmonizome-helper",
-    version="0.2.0",
+    version="0.2.1",
     author="Charles R. Dai",
     author_email="charles.r.dai@gmail.com",
     description="A small package of helper functions for Harmonizome appyters",
